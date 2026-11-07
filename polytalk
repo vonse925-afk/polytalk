@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>PolyTalk</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:#050507; --blue:#24A1DE; --lime:#A3E635; --neon:#39FF14;
+  --glass:rgba(255,255,255,.05); --glass-b:rgba(255,255,255,.1);
+  --tx:#fff; --mu:rgba(255,255,255,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;overflow-x:hidden}
+body{min-height:100vh;min-height:100dvh;position:relative}
+
+/* Жидкий фон */
+.blobs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.38;animation:drift 18s infinite alternate ease-in-out}
+.b1{width:300px;height:300px;background:var(--blue);top:-90px;left:-80px}
+.b2{width:280px;height:280px;background:var(--lime);bottom:-60px;right:-90px;animation-delay:-7s;opacity:.28}
+.b3{width:200px;height:200px;background:#0a84ff;top:42%;right:-60px;animation-delay:-3s;opacity:.2}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,50px) scale(1.15)}100%{transform:translate(-30px,25px) scale(.9)}}
+
+.app{position:relative;z-index:1;max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:14px;
+  padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));min-height:100vh;min-height:100dvh}
+
+.glass{background:var(--glass);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+  border:1px solid var(--glass-b);border-radius:22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 30px rgba(0,0,0,.4)}
+
+/* Шапка */
+header{display:flex;align-items:center;justify-content:space-between;padding:4px 2px}
+h1{font-size:28px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(90deg,var(--blue),var(--lime));-webkit-background-clip:text;background-clip:text;color:transparent}
+.badge{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;font-size:12px;color:var(--mu)}
+.badge i{width:7px;height:7px;border-radius:50%;background:var(--neon);box-shadow:0 0 10px var(--neon)}
+
+/* Языки */
+.langs{padding:14px}
+.label{font-size:12px;color:var(--mu);margin:0 2px 8px;text-transform:uppercase;letter-spacing:.8px}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{padding:9px 14px;border-radius:14px;border:1px solid var(--glass-b);background:var(--glass);color:var(--tx);font-size:14px;cursor:pointer;transition:.2s}
+.tag:active{transform:scale(.95)}
+.tag.on{background:rgba(163,230,53,.16);border-color:var(--lime);color:var(--lime);box-shadow:0 0 16px rgba(163,230,53,.45)}
+@media(hover:hover){.tag:not(.on):hover{border-color:var(--blue);box-shadow:0 0 14px rgba(36,161,222,.4)}}
+.swap-row{display:flex;align-items:center;gap:12px;margin:14px 0}
+.swap-row span{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--glass-b),transparent)}
+#swap{width:46px;height:46px;border-radius:50%;border:1px solid var(--glass-b);background:var(--glass);color:var(--blue);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.3s;box-shadow:0 0 16px rgba(36,161,222,.3)}
+#swap:active{box-shadow:0 0 24px rgba(163,230,53,.7);color:var(--lime)}
+#swap svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .4s}
+#swap.spin svg{transform:rotate(180deg)}
+
+/* Ввод */
+.field{position:relative;transition:.25s}
+.field:focus-within{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue),0 0 26px rgba(36,161,222,.4),inset 0 1px 0 rgba(255,255,255,.12)}
+textarea{width:100%;min-height:150px;padding:18px 18px 38px;background:transparent;border:0;outline:0;resize:none;color:var(--tx);font:inherit;font-size:17px;line-height:1.45}
+textarea::placeholder{color:rgba(255,255,255,.35)}
+.count{position:absolute;right:16px;bottom:12px;font-size:12px;color:var(--mu)}
+
+/* Кнопка */
+#go{position:relative;height:58px;border:0;border-radius:22px;cursor:pointer;overflow:hidden;font-size:18px;font-weight:700;color:#04140a;
+  background:linear-gradient(120deg,var(--blue),var(--lime),var(--blue));background-size:200% 100%;animation:flow 6s linear infinite;
+  box-shadow:0 0 26px rgba(36,161,222,.45),0 0 38px rgba(163,230,53,.25);transition:.2s}
+#go::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 55%)}
+#go span{position:relative}
+#go:active{transform:scale(.98);box-shadow:0 0 34px rgba(36,161,222,.8),0 0 50px rgba(163,230,53,.6)}
+#go:disabled{opacity:.7}
+@keyframes flow{to{background-position:200% 0}}
+.spin-ic{display:inline-block;width:18px;height:18px;border:3px solid rgba(4,20,10,.3);border-top-color:#04140a;border-radius:50%;animation:rot .7s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* Результат */
+#result{display:none;padding:16px;animation:pop .35s ease}
+#result.show{display:block}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.res-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.res-head .label{margin:0;color:var(--lime)}
+#out{font-size:18px;line-height:1.5;white-space:pre-wrap;word-break:break-word;user-select:text}
+.actions{display:flex;gap:8px;margin-top:14px}
+.btn{flex:1;padding:11px;border-radius:14px;border:1px solid var(--glass-b);background:var(--glass);color:var(--tx);font-size:14px;cursor:pointer;transition:.2s}
+.btn.main{border-color:rgba(163,230,53,.5);color:var(--lime)}
+.btn:active{transform:scale(.96);box-shadow:0 0 16px rgba(36,161,222,.5)}
+.btn.main:active{box-shadow:0 0 16px rgba(163,230,53,.6)}
+#err{display:none;padding:12px 14px;border-color:rgba(255,90,120,.4);color:#ff8aa0;font-size:14px}
+#err.show{display:block}
+
+#toast{position:fixed;left:50%;top:calc(18px + env(safe-area-inset-top));transform:translate(-50%,-90px);z-index:10;padding:10px 20px;border-radius:999px;
+  color:var(--lime);border:1px solid var(--lime);background:rgba(10,20,5,.8);backdrop-filter:blur(16px);box-shadow:0 0 20px rgba(163,230,53,.5);font-size:14px;font-weight:600;transition:transform .3s}
+#toast.show{transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="blobs"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<main class="app">
+  <header>
+    <h1>PolyTalk</h1>
+    <div class="badge glass"><i></i>No-DB Edition</div>
+  </header>
+
+  <section class="glass langs">
+    <div class="label">Исходный язык</div>
+    <div class="tags" id="src"></div>
+    <div class="swap-row"><span></span>
+      <button id="swap" aria-label="Поменять языки"><svg viewBox="0 0 24 24"><path d="M7 4v16M7 20l-4-4M7 20l4-4M17 20V4M17 4l-4 4M17 4l4 4"/></svg></button>
+    <span></span></div>
+    <div class="label">Перевести на</div>
+    <div class="tags" id="dst"></div>
+  </section>
+
+  <div class="glass field">
+    <textarea id="input" placeholder="Введите текст для перевода..."></textarea>
+    <div class="count" id="count">0 симв.</div>
+  </div>
+
+  <button id="go"><span>Перевести</span></button>
+  <div class="glass" id="err"></div>
+
+  <section class="glass" id="result">
+    <div class="res-head"><div class="label" id="res-label">Перевод</div></div>
+    <div id="out"></div>
+    <div class="actions">
+      <button class="btn main" id="copy">Копировать</button>
+      <button class="btn" id="clear">Очистить</button>
+    </div>
+  </section>
+</main>
+<div id="toast">Скопировано!</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) {
+  tg.ready(); tg.expand();
+  try { tg.setHeaderColor("#000000"); tg.setBackgroundColor("#000000"); } catch (e) {}
+}
+const haptic = (t = "light") => { try { tg.HapticFeedback.impactOccurred(t); } catch (e) {} };
+
+const LANGS = [
+  { c: "auto", n: "Авто" }, { c: "ru", n: "Русский" }, { c: "en", n: "Английский" },
+  { c: "es", n: "Испанский" }, { c: "de", n: "Немецкий" }
+];
+const name = c => (LANGS.find(l => l.c === c) || {}).n || c;
+let src = "auto", dst = "en", detected = null;
+
+function renderTags() {
+  const make = (el, list, cur, pick) => {
+    el.innerHTML = "";
+    list.forEach(l => {
+      const b = document.createElement("button");
+      b.className = "tag" + (l.c === cur ? " on" : "");
+      b.textContent = l.n;
+      b.onclick = () => { haptic(); pick(l.c); renderTags(); };
+      el.appendChild(b);
+    });
+  };
+  make($("src"), LANGS, src, c => {
+    if (c !== "auto" && c === dst) dst = src !== "auto" ? src : (c === "en" ? "ru" : "en");
+    src = c;
+  });
+  make($("dst"), LANGS.filter(l => l.c !== "auto"), dst, c => {
+    if (c === src) src = dst;
+    dst = c;
+  });
+}
+
+function swap() {
+  haptic("medium");
+  $("swap").classList.toggle("spin");
+  const newSrc = dst;
+  const newDst = src !== "auto" ? src : (detected && detected !== dst ? detected : (dst === "ru" ? "en" : "ru"));
+  src = newSrc; dst = newDst;
+  if ($("result").classList.contains("show")) {
+    $("input").value = $("out").textContent;
+    hideResult(); updateCount();
+  }
+  renderTags();
+}
+
+function updateCount() { $("count").textContent = $("input").value.length + " симв."; }
+function hideResult() { $("result").classList.remove("show"); }
+function showError(m) { const e = $("err"); e.textContent = m; e.classList.add("show"); }
+function hideError() { $("err").classList.remove("show"); }
+
+const bytes = s => new TextEncoder().encode(s).length;
+function decode(s) { const t = document.createElement("textarea"); t.innerHTML = s; return t.value; }
+
+// Делим длинный текст на части по предложениям
+function chunks(text, max, size = bytes) {
+  const parts = text.match(/[^.!?\n]+[.!?]*\s*/g) || [text];
+  const out = []; let cur = "";
+  for (let p of parts) {
+    if (size(p) > max) {
+      if (cur) { out.push(cur); cur = ""; }
+      let piece = "";
+      for (const ch of p) { if (size(piece + ch) > max) { out.push(piece); piece = ""; } piece += ch; }
+      p = piece;
+    }
+    if (size(cur + p) > max) { out.push(cur); cur = p; } else cur += p;
+  }
+  if (cur) out.push(cur);
+  return out.filter(x => x.trim());
+}
+
+// Основной переводчик (без ключа и регистрации)
+async function googlePart(q) {
+  const r = await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl=" + src + "&tl=" + dst, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "q=" + encodeURIComponent(q)
+  });
+  if (!r.ok) throw new Error("google");
+  const j = await r.json();
+  if (j[2]) detected = String(j[2]).slice(0, 2).toLowerCase();
+  return j[0].map(seg => seg[0]).join("");
+}
+
+// Запасной переводчик (MyMemory, до 500 байт за запрос)
+async function myMemoryPart(q) {
+  const pair = (src === "auto" ? "autodetect" : src) + "|" + dst;
+  const r = await fetch("https://api.mymemory.translated.net/get?q=" + encodeURIComponent(q) + "&langpair=" + pair);
+  const j = await r.json();
+  const text = decode((j.responseData && j.responseData.translatedText) || "");
+  if (Number(j.responseStatus) === 429 || /MYMEMORY WARNING/i.test(text)) throw new Error("limit");
+  if (Number(j.responseStatus) !== 200) throw new Error("fail");
+  const d = j.responseData && j.responseData.detectedLanguage;
+  if (d) detected = String(d).slice(0, 2).toLowerCase();
+  return text;
+}
+
+async function translatePart(q) {
+  try { return await googlePart(q); }
+  catch (e) {
+    const out = [];
+    for (const p of chunks(q, 450)) out.push(await myMemoryPart(p));
+    return out.join(" ");
+  }
+}
+
+async function translate() {
+  hideError();
+  const text = $("input").value.trim();
+  if (!text) { showError("Введите текст для перевода."); return; }
+  if (src !== "auto" && src === dst) { showError("Выберите разные языки."); return; }
+  haptic("medium");
+  const go = $("go");
+  go.disabled = true;
+  go.innerHTML = '<span><i class="spin-ic"></i>Перевожу…</span>';
+  detected = null;
+  try {
+    const res = [];
+    for (const part of chunks(text, 3000, x => x.length)) res.push(await translatePart(part));
+    $("out").textContent = res.join(" ").trim();
+    $("res-label").textContent = src === "auto" && detected && LANGS.some(l => l.c === detected)
+      ? "Определён язык: " + name(detected) + " → " + name(dst) : "Перевод · " + name(dst);
+    $("result").classList.add("show");
+    $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    try { tg.HapticFeedback.notificationOccurred("success"); } catch (e) {}
+  } catch (e) {
+    showError(e.message === "limit"
+      ? "Сервис перевода сейчас недоступен. Попробуйте позже."
+      : "Не удалось перевести. Проверьте интернет и попробуйте ещё раз.");
+  } finally {
+    go.disabled = false;
+    go.innerHTML = "<span>Перевести</span>";
+  }
+}
+
+async function copyText() {
+  const t = $("out").textContent;
+  try { await navigator.clipboard.writeText(t); }
+  catch (e) {
+    const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a);
+    a.select(); document.execCommand("copy"); a.remove();
+  }
+  haptic();
+  const toast = $("toast"); toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 1600);
+}
+
+$("input").addEventListener("input", updateCount);
+$("go").onclick = translate;
+$("swap").onclick = swap;
+$("copy").onclick = copyText;
+$("clear").onclick = () => { haptic(); $("input").value = ""; updateCount(); hideResult(); hideError(); $("input").focus(); };
+
+renderTags();
+</script>
+</body>
+</html>
